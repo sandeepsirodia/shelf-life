@@ -19,15 +19,17 @@ Maybe. Or maybe nobody dares touch it. Or maybe it's being compared against lock
 
 shelf-life runs **survival analysis** on your own git history, the same statistics medicine uses to ask "how long do patients survive on this drug?". Every line is tracked from the commit that wrote it until the commit that changed or deleted it. Agent-written lines (from `Co-Authored-By: Claude / Codex / Copilot / Cursor…` trailers) are compared with human-written ones.
 
+<p align="center"><img src="assets/agent-vs-human.svg" alt="Agent vs human code, still alive after 30 days: llm too few commits to tell; datasette −19 points (−26…−0); uv +5 (−6…+12); tldraw +7 (+1…+13)" width="760"></p>
+
 ```console
 $ uvx --from git+https://github.com/sandeepsirodia/shelf-life shelf-life
 
 Comparing lines written since the first agent commit (2025-10-08).
-Agent lines: 10051 written in 27 commits, …
-  still alive after 30 days:  75%  (95% CI 68–96%)
-Human lines: 75239 written in 297 commits, …
-  still alive after 30 days:  94%  (95% CI 90–96%)
-Agent − human, alive after 30 days: -19 pts (95% CI -27…+1) → no detectable difference
+Agent lines: 10051 written in 60 commits, …
+  still alive after 30 days:  75%  (95% CI …)
+Human lines: 75137 written in 384 commits, …
+  still alive after 30 days:  94%  (95% CI …)
+Agent − human, alive after 30 days: -19 pts (95% CI -26…-0) → agent lines die sooner
 (Intervals resample whole commits: lines written together aren't independent.)
 ```
 
@@ -37,14 +39,12 @@ Lines written since each repo's first agent commit, generated files excluded, wi
 
 | Repo | Agent commits | Agent − human, alive after 30 days | After 90 days |
 |---|---|---|---|
-| [simonw/llm](https://github.com/simonw/llm) | 11 | −1 pts (−4…+2) | −0 pts (−4…+3) |
-| [simonw/datasette](https://github.com/simonw/datasette) | 27 | −19 pts (−27…+1) | −18 pts (−26…+1) |
-| [astral-sh/uv](https://github.com/astral-sh/uv) | 150 | +5 pts (−7…+11) | +7 pts (−6…+14) |
+| [simonw/llm](https://github.com/simonw/llm) | 8 | too few commits to tell | too few commits to tell |
+| [simonw/datasette](https://github.com/simonw/datasette) | 60 | **−19 pts (−26…−0)** | **−18 pts (−26…−2)** |
+| [astral-sh/uv](https://github.com/astral-sh/uv) | 152 | +5 pts (−6…+12) | +7 pts (−5…+14) |
 | [tldraw/tldraw](https://github.com/tldraw/tldraw) | 235 | **+7 pts (+1…+13)** | +4 pts (−14…+19) |
 
-**With honest error bars, 7 of 8 comparisons show no detectable difference.** The only clear one is tldraw at 30 days, where agent lines last slightly longer. datasette *looks* like agent code dies much sooner, but that rests on 27 commits, and the interval still touches zero.
-
-That's not a disappointing result. It's the point: most of what gets said about "AI code quality" from git history is noise, and shelf-life shows you how much of it is. Raw results for all four are in [`results/`](results/).
+**There's no single answer, and most of what's been claimed about it is noise.** In tldraw, agent-written lines last slightly longer at 30 days. In datasette, they get rewritten sooner: 96% of them are touched by someone else, which looks like a maintainer reviewing and reworking agent output. uv shows no detectable difference either way, and llm has too few agent commits to say anything. Raw results for all four are in [`results/`](results/).
 
 ## The same repo, three ways
 
