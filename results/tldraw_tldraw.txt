@@ -1,23 +1,25 @@
 Comparing lines written since the first agent commit (2025-06-05). Use --all-history for everything.
 Commits: human 5883, bot 204, claude 201, cursor 26, copilot 12
 
-Agent lines: 227390 written, 58732 later modified or deleted, median life 426 days
-  still alive after  7 days:  96%  (95% CI 96–96%)
-  still alive after 30 days:  95%  (95% CI 95–95%)
-  still alive after 90 days:  79%  (95% CI 79–79%)
+Agent lines: 227390 written in 235 commits, 58732 later modified or deleted, median life 426 days
+  still alive after  7 days:  96%  (95% CI 93–98%)
+  still alive after 30 days:  95%  (95% CI 92–97%)
+  still alive after 90 days:  79%  (95% CI 68–89%)
 
-Human lines: 557360 written, 193452 later modified or deleted, median life 460 days
-  still alive after  7 days:  93%  (95% CI 93–93%)
-  still alive after 30 days:  88%  (95% CI 88–88%)
-  still alive after 90 days:  75%  (95% CI 75–75%)
+Human lines: 557360 written in 1905 commits, 193452 later modified or deleted, median life 460 days
+  still alive after  7 days:  93%  (95% CI 89–97%)
+  still alive after 30 days:  88%  (95% CI 82–93%)
+  still alive after 90 days:  75%  (95% CI 66–85%)
 
-Log-rank test, agent vs human: chi2=5190.9, p<1e-16 → different
+Agent − human, alive after 30 days: +7 pts (95% CI +1…+13) → agent lines last longer
+Agent − human, alive after 90 days: +4 pts (95% CI -14…+19) → no detectable difference
+(Intervals resample whole commits: lines written together aren't independent.)
 Touched by someone else while alive: agent 77%, human 75%
 
 By author:
-  claude   202577 lines   alive after 30 days:  95%  (95% CI 95–95%)
-  copilot   18127 lines   alive after 30 days:  95%  (95% CI 94–95%)
-  cursor     6686 lines   alive after 30 days:  92%  (95% CI 92–93%)
-  human    557360 lines   alive after 30 days:  88%  (95% CI 88–88%)
+  claude   202577 lines in  197 commits   alive after 30 days:  95%  (95% CI 92–98%)
+  copilot   18127 lines in   12 commits   alive after 30 days:  95%  (95% CI 86–100%)
+  cursor     6686 lines in   26 commits   alive after 30 days:  92%  (95% CI 78–98%)
+  human    557360 lines in 1905 commits   alive after 30 days:  88%  (95% CI 82–93%)
 
 Skipped: binary file changes 3684, generated/excluded file changes 18508

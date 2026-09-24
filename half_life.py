@@ -97,6 +97,65 @@ def survival_at(curve, t):
     return s, (s ** math.exp(1.96 * sd), s ** math.exp(-1.96 * sd))
 
 
+def km_at(rows, horizons):
+    """Weighted Kaplan-Meier S(t) at each horizon. rows: sorted [(t, event, weight)]."""
+    n = sum(w for _, _, w in rows)
+    s, out, hi, i = 1.0, {}, sorted(horizons), 0
+    k = 0
+    while i < len(rows):
+        t = rows[i][0]
+        while k < len(hi) and hi[k] < t:
+            out[hi[k]] = s
+            k += 1
+        d = c = 0.0
+        while i < len(rows) and rows[i][0] == t:
+            if rows[i][1]:
+                d += rows[i][2]
+            else:
+                c += rows[i][2]
+            i += 1
+        if d and n > 0:
+            s *= 1 - d / n
+        n -= d + c
+    for h in hi[k:]:
+        out[h] = s
+    return out
+
+
+def cluster_bootstrap(obs_by_group, horizons=(7, 30, 90), reps=200, seed=0):
+    """95% intervals for S(h) per group, and for the agent - human difference, resampling *commits*.
+    Lines written in the same commit live and die together, so treating them as independent (Greenwood)
+    gives absurdly narrow intervals on big repos."""
+    import random
+    rng = random.Random(seed)
+    prepared = {}
+    for g, obs in obs_by_group.items():
+        agg = Counter((o["commit"], round(o["days"], 6), o["event"]) for o in obs)
+        rows = sorted((days, ev, commit, w) for (commit, days, ev), w in agg.items())
+        commits = sorted({c for _, _, c, _ in rows})
+        prepared[g] = (rows, commits)
+    draws = {g: [] for g in prepared}
+    diffs = []
+    for _ in range(reps):
+        est = {}
+        for g, (rows, commits) in prepared.items():
+            mult = Counter(rng.choice(commits) for _ in commits)
+            weighted = [(t, ev, w * mult[c]) for t, ev, c, w in rows if mult.get(c)]
+            est[g] = km_at(weighted, horizons)
+            draws[g].append(est[g])
+        if "agent" in est and "human" in est:
+            diffs.append({h: est["agent"][h] - est["human"][h] for h in horizons})
+
+    def pct(values):
+        v = sorted(values)
+        return v[int(0.025 * (len(v) - 1))], v[int(0.975 * (len(v) - 1))]
+
+    out = {g: {h: pct([d[h] for d in ds]) for h in horizons} for g, ds in draws.items() if ds}
+    if diffs:
+        out["diff"] = {h: pct([d[h] for d in diffs]) for h in horizons}
+    return out
+
+
 def median_survival(curve):
     for t, _, _, s, _ in curve:
         if s <= 0.5:
@@ -317,13 +376,13 @@ def observations(state, end_ts=None, born_after=None):
     for birth, death, cls, author, fkey, killer, path in state.dead:
         if born_after is not None and birth < born_after:
             continue
-        yield {"group": group_of(cls), "cls": cls, "days": (death - birth) / DAY, "event": 1, "path": path,
+        yield {"group": group_of(cls), "cls": cls, "days": (death - birth) / DAY, "event": 1, "path": path, "commit": birth,
                "exposed": killer != identity(cls, author) or exposed(fkey, birth, death, author, cls)}
     for path, lines in state.files.items():
         for birth, cls, author, fkey, _ in lines:
             if born_after is not None and birth < born_after:
                 continue
-            yield {"group": group_of(cls), "cls": cls, "days": (end - birth) / DAY, "event": 0, "path": path,
+            yield {"group": group_of(cls), "cls": cls, "days": (end - birth) / DAY, "event": 0, "path": path, "commit": birth,
                    "exposed": exposed(fkey, birth, end, author, cls)}
 
 
@@ -343,7 +402,7 @@ def thin(points, k=400):
     return [points[int(i * step)] for i in range(k)] + [points[-1]]
 
 
-def analyze(state, breakdown_by=("cls",), all_history=False):
+def analyze(state, breakdown_by=("cls",), all_history=False, bootstrap=200):
     """Default: compare only lines born since the first agent commit, so both groups come from the same
     era of the project (early history churns more, and agents only exist in recent history)."""
     since = None if all_history else first_agent_ts(state)
@@ -356,6 +415,15 @@ def analyze(state, breakdown_by=("cls",), all_history=False):
     for g, os_ in groups.items():
         out["groups"][g] = summarize(os_)
         out["groups"][g]["exposed_share"] = sum(o["exposed"] for o in os_) / len(os_)
+    if bootstrap and groups:
+        cb = cluster_bootstrap(dict(groups), reps=bootstrap)
+        for g in out["groups"]:
+            if g in cb:
+                out["groups"][g]["survival_clustered"] = {
+                    hz: (out["groups"][g]["survival"][hz][0], cb[g][hz]) for hz in cb[g]}
+                out["groups"][g]["commits"] = len({o["commit"] for o in groups[g]})
+        if "diff" in cb:
+            out["diff_clustered"] = cb["diff"]
     if "agent" in groups and "human" in groups:
         a, h = groups["agent"], groups["human"]
         chi2, p, o1, e1 = logrank([o["days"] for o in a], [o["event"] for o in a],
@@ -376,7 +444,16 @@ def analyze(state, breakdown_by=("cls",), all_history=False):
                  "ext": os.path.splitext(o["path"])[1] or "(none)",
                  "kind": "tests" if TEST_RE.search(o["path"]) else "code"}[key]
             sub[k].append(o)
-        out["by"][key] = {k: summarize(v) for k, v in sorted(sub.items()) if len(v) >= 10}
+        out["by"][key] = {}
+        for k, v in sorted(sub.items()):
+            if len(v) < 10:
+                continue
+            out["by"][key][k] = summarize(v)
+            out["by"][key][k]["commits"] = len({o["commit"] for o in v})
+            if bootstrap:
+                cb = cluster_bootstrap({k: v}, reps=bootstrap)[k]
+                out["by"][key][k]["survival_clustered"] = {
+                    hz: (out["by"][key][k]["survival"][hz][0], cb[hz]) for hz in cb}
     return out
 
 
@@ -434,8 +511,13 @@ def join_costs(state, sessions, window=2 * 3600):
 
 # ------------------------------------------------------------------ output
 
-def fmt_surv(v):
+MIN_COMMITS = 10
+
+
+def fmt_surv(v, commits=None):
     s, (lo, hi) = v
+    if commits is not None and commits < MIN_COMMITS:
+        return "%3.0f%%  (too few commits for an interval)" % (100 * s)
     return "%3.0f%%  (95%% CI %.0f–%.0f%%)" % (100 * s, 100 * lo, 100 * hi)
 
 
@@ -451,16 +533,21 @@ def report(res, out):
             continue
         s = res["groups"][g]
         med = "%.0f days" % s["median_days"] if s["median_days"] is not None else "not reached"
-        out.write("%s lines: %d written, %d later modified or deleted, median life %s\n" % (
-            g.capitalize(), s["lines"], s["deaths"], med))
-        for h, v in s["survival"].items():
-            out.write("  still alive after %2d days: %s\n" % (h, fmt_surv(v)))
+        out.write("%s lines: %d written in %s commits, %d later modified or deleted, median life %s\n" % (
+            g.capitalize(), s["lines"], s.get("commits", "?"), s["deaths"], med))
+        for h, v in (s.get("survival_clustered") or s["survival"]).items():
+            out.write("  still alive after %2d days: %s\n" % (h, fmt_surv(v, s.get("commits"))))
         out.write("\n")
+    if res.get("diff_clustered"):
+        for h in (30, 90):
+            a_ = res["groups"]["agent"]["survival"][h][0] - res["groups"]["human"]["survival"][h][0]
+            lo, hi = res["diff_clustered"][h]
+            verdict = "no detectable difference" if lo <= 0 <= hi else ("agent lines last longer" if lo > 0 else
+                                                                         "agent lines die sooner")
+            out.write("Agent − human, alive after %d days: %+.0f pts (95%% CI %+.0f…%+.0f) → %s\n" % (
+                h, 100 * a_, 100 * lo, 100 * hi, verdict))
+        out.write("(Intervals resample whole commits: lines written together aren't independent.)\n")
     if "logrank" in res:
-        lr = res["logrank"]
-        pv = "p<1e-16" if lr["p"] < 1e-16 else "p=%.2g" % lr["p"]
-        out.write("Log-rank test, agent vs human: chi2=%.1f, %s → %s\n" % (
-            lr["chi2"], pv, "different" if lr["p"] < 0.05 else "no detectable difference"))
         cf = res["confound"]
         out.write("Touched by someone else while alive: agent %.0f%%, human %.0f%%\n" % (
             100 * cf["agent_exposed_share"], 100 * cf["human_exposed_share"]))
@@ -469,12 +556,14 @@ def report(res, out):
     if len(res["by"].get("cls", {})) > 1:
         out.write("\nBy author:\n")
         for k, s in res["by"]["cls"].items():
-            out.write("  %-8s %6d lines   alive after 30 days: %s\n" % (k, s["lines"], fmt_surv(s["survival"][30])))
+            out.write("  %-8s %6d lines in %4d commits   alive after 30 days: %s\n" % (
+                k, s["lines"], s["commits"], fmt_surv((s.get("survival_clustered") or s["survival"])[30], s["commits"])))
     for key in ("dir", "ext", "kind"):
         if res["by"].get(key):
             out.write("\nBy %s:\n" % key)
             for k, s in res["by"][key].items():
-                out.write("  %-16s %6d lines   alive after 30 days: %s\n" % (k, s["lines"], fmt_surv(s["survival"][30])))
+                out.write("  %-16s %6d lines in %4d commits   alive after 30 days: %s\n" % (
+                    k, s["lines"], s["commits"], fmt_surv((s.get("survival_clustered") or s["survival"])[30], s["commits"])))
     if res.get("cost"):
         c = res["cost"]
         out.write("\nCost join: %d session(s) matched to %d agent commit(s)\n" % (c["sessions"], c["agent_commits"]))
@@ -537,6 +626,8 @@ def main(argv=None, out=None):
     ap.add_argument("--transcripts", metavar="DIR", help="Claude Code transcripts for the cost join (e.g. ~/.claude/projects)")
     ap.add_argument("--all-history", action="store_true",
                     help="compare all lines ever written (default: only since the first agent commit, same era)")
+    ap.add_argument("--bootstrap", type=int, default=200, metavar="N",
+                    help="commit-level bootstrap resamples for the intervals (default 200; 0 = off)")
     ap.add_argument("--no-cache", action="store_true")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--html", metavar="FILE")
@@ -549,7 +640,7 @@ def main(argv=None, out=None):
     repo = os.path.abspath(a.repo)
     state = replay(repo, agents, a.count_whitespace, cache=not a.no_cache,
                    exclude=build_exclude(a.include_generated, a.exclude))
-    res = analyze(state, tuple(a.by or ["cls"]), a.all_history)
+    res = analyze(state, tuple(a.by or ["cls"]), a.all_history, a.bootstrap)
     if a.transcripts:
         tokens, cost, matched, n_commits = join_costs(state, load_sessions(a.transcripts, repo))
         n90 = sum(1 for o in observations(state) if o["group"] == "agent" and o["days"] >= 90)

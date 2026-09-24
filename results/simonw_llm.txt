@@ -1,21 +1,23 @@
 Comparing lines written since the first agent commit (2026-03-06). Use --all-history for everything.
-Commits: human 1134, bot 8, claude 8
+Commits: human 1135, claude 12, bot 9
 
-Agent lines: 1455 written, 78 later modified or deleted, median life not reached
-  still alive after  7 days:  99%  (95% CI 99–100%)
-  still alive after 30 days:  99%  (95% CI 99–100%)
-  still alive after 90 days:  96%  (95% CI 94–97%)
+Agent lines: 2276 written in 11 commits, 152 later modified or deleted, median life not reached
+  still alive after  7 days:  97%  (95% CI 93–99%)
+  still alive after 30 days:  97%  (95% CI 93–99%)
+  still alive after 90 days:  94%  (95% CI 90–96%)
 
-Human lines: 26955 written, 1461 later modified or deleted, median life not reached
-  still alive after  7 days:  99%  (95% CI 98–99%)
-  still alive after 30 days:  98%  (95% CI 98–98%)
-  still alive after 90 days:  94%  (95% CI 93–94%)
+Human lines: 27215 written in 140 commits, 1430 later modified or deleted, median life not reached
+  still alive after  7 days:  99%  (95% CI 96–99%)
+  still alive after 30 days:  98%  (95% CI 96–99%)
+  still alive after 90 days:  94%  (95% CI 91–95%)
 
-Log-rank test, agent vs human: chi2=12.1, p=0.0005 → different
-Touched by someone else while alive: agent 72%, human 67%
+Agent − human, alive after 30 days: -1 pts (95% CI -4…+2) → no detectable difference
+Agent − human, alive after 90 days: -0 pts (95% CI -4…+3) → no detectable difference
+(Intervals resample whole commits: lines written together aren't independent.)
+Touched by someone else while alive: agent 81%, human 68%
 
 By author:
-  claude     1455 lines   alive after 30 days:  99%  (95% CI 99–100%)
-  human     26955 lines   alive after 30 days:  98%  (95% CI 98–98%)
+  claude     2276 lines in   11 commits   alive after 30 days:  97%  (95% CI 93–99%)
+  human     27215 lines in  140 commits   alive after 30 days:  98%  (95% CI 96–99%)
 
-Skipped: generated/excluded file changes 135
+Skipped: generated/excluded file changes 137

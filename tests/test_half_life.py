@@ -80,6 +80,34 @@ class TestStatistics(unittest.TestCase):
             self.assertTrue(0 <= lo < s < hi <= 1)
 
 
+class TestClusteredIntervals(unittest.TestCase):
+    def test_km_at_matches_unweighted_km(self):
+        rows = sorted((t, e, 1) for t, e in SIX_MP)
+        got = hl.km_at(rows, (6, 13, 23, 40))
+        self.assertAlmostEqual(got[13], 0.690, places=3)
+        self.assertAlmostEqual(got[23], 0.448, places=3)
+        self.assertAlmostEqual(got[40], 0.448, places=3)
+
+    def test_clustered_interval_is_wider_than_greenwood_when_lines_move_together(self):
+        # 40 commits of 200 lines each; every line in a commit dies (or not) together
+        import random
+        rng = random.Random(1)
+        obs = []
+        for c in range(40):
+            dies = rng.random() < 0.5
+            days = rng.uniform(1, 60) if dies else 100.0
+            obs += [{"commit": c, "days": days, "event": int(dies)} for _ in range(200)]
+        cb = hl.cluster_bootstrap({"agent": obs}, horizons=(30,), reps=300)
+        lo, hi = cb["agent"][30]
+        curve = hl.kaplan_meier([o["days"] for o in obs], [o["event"] for o in obs])
+        _, (glo, ghi) = hl.survival_at(curve, 30)
+        self.assertGreater(hi - lo, 5 * (ghi - glo))  # naive interval pretends 8000 lines = 8000 samples
+
+    def test_bootstrap_is_deterministic(self):
+        obs = [{"commit": c % 7, "days": float(c), "event": c % 2} for c in range(50)]
+        self.assertEqual(hl.cluster_bootstrap({"agent": obs}), hl.cluster_bootstrap({"agent": obs}))
+
+
 class TestAttribution(unittest.TestCase):
     def test_e1_trailers(self):
         self.assertEqual(hl.classify("Hana <h@x>", "fix\n\nCo-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"), "claude")
