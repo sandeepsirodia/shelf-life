@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 
 __version__ = "0.1.0"
 DAY = 86400.0
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 
 # (agent name, regex over "Co-authored-by:" trailers and the author "name <email>")
 AGENTS = [
@@ -191,13 +191,16 @@ def logrank(d1, e1, d2, e2):
 
 class State:
     """Line-level replay of first-parent history. Saved as JSON for the incremental cache."""
-    FIELDS = ("files", "file_keys", "touches", "dead", "last_commit", "head_ts", "commits", "skipped", "next_key")
+    FIELDS = ("files", "file_keys", "touches", "dead", "last_commit", "head_ts", "commits", "skipped", "next_key",
+              "unknown", "commit_no")
 
     def __init__(self):
-        self.files = {}      # path -> [line, …]; line = [birth_ts, cls, author, file_key, content]
+        self.files = {}      # path -> [line, …]; line = [birth_ts, cls, author, file_key, content, commit_no]
+        self.unknown = {}    # paths whose earlier content we never saw (excluded, then renamed in): never guessed at
+        self.commit_no = 0   # ordinal of the commit being replayed: the cluster id (timestamps can collide)
         self.file_keys = {}  # path -> stable key that survives renames
         self.touches = {}    # str(file_key) -> [[ts, author_identity], …]
-        self.dead = []       # [birth_ts, death_ts, cls, author, file_key, killer_identity, path]
+        self.dead = []       # [birth_ts, death_ts, cls, author, file_key, killer_identity, path, commit_no]
         self.last_commit = None
         self.head_ts = 0.0
         self.commits = Counter()
@@ -259,6 +262,8 @@ def apply_commit(state, record, agents, count_whitespace=False, exclude=None):
     cls = classify(author, message, agents)
     who = identity(cls, author)
     state.commits[cls] += 1
+    state.commit_no += 1
+    cid = state.commit_no
     state.last_commit, state.head_ts = sha, max(state.head_ts, ts)
 
     for fpatch in re.split(r"^diff --git ", patch, flags=re.M)[1:]:
@@ -267,10 +272,19 @@ def apply_commit(state, record, agents, count_whitespace=False, exclude=None):
         rename = re.search(r"^rename from (.+)\nrename to (.+)$", header, re.M)
         if rename:
             old, new = rename.group(1), rename.group(2)
-            state.files[new] = state.files.pop(old, [])
-            state.file_keys[new] = state.file_keys.pop(old, None)
-            if state.file_keys[new] is None:
-                del state.file_keys[new]
+            if old in state.files:
+                state.files[new] = state.files.pop(old)
+                if old in state.file_keys:
+                    state.file_keys[new] = state.file_keys.pop(old)
+            else:
+                # Renamed in from a path we never tracked (excluded, vendored, or unknown): we don't know its
+                # lines, and guessing "empty" would misplace every later hunk. Skip the file instead.
+                state.files.pop(new, None)
+                state.unknown[new] = True
+            if old in state.unknown:
+                state.unknown.pop(old)
+                state.unknown[new] = True
+                state.files.pop(new, None)
         if re.search(r"^Binary files|^GIT binary patch", header + body, re.M):
             state.skipped["binary file changes"] += 1
             continue
@@ -284,6 +298,13 @@ def apply_commit(state, record, agents, count_whitespace=False, exclude=None):
         if exclude is not None and exclude.search(path):
             state.skipped["generated/excluded file changes"] += 1
             state.files.pop(path, None)
+            continue
+        if path in state.unknown:
+            continue
+        is_new = "--- /dev/null" in header or re.search(r"^new file mode", header, re.M)
+        if path not in state.files and not is_new:
+            state.unknown[path] = True
+            state.skipped["files that entered tracking mid-history"] += 1
             continue
         lines = state.files.setdefault(path, [])
         fkey = state.key(path)
@@ -306,10 +327,10 @@ def apply_commit(state, record, agents, count_whitespace=False, exclude=None):
                     new.append(old[i])
                     kept_ids.add(id(old[i]))
                 else:
-                    new.append([ts, cls, author, fkey, content])
+                    new.append([ts, cls, author, fkey, content, cid])
             for line in old:
                 if id(line) not in kept_ids:
-                    state.dead.append([line[0], ts, line[1], line[2], line[3], who, path])
+                    state.dead.append([line[0], ts, line[1], line[2], line[3], who, path, line[5]])
             lines[pos:pos + b] = new
             delta += len(added) - b
         if m_new.group(1) == "/dev/null":
@@ -373,16 +394,16 @@ def observations(state, end_ts=None, born_after=None):
         lo, hi = bisect.bisect_right(ts, birth), bisect.bisect_right(ts, until)
         return any(w != me for _, w in who[lo:hi])
 
-    for birth, death, cls, author, fkey, killer, path in state.dead:
+    for birth, death, cls, author, fkey, killer, path, cid in state.dead:
         if born_after is not None and birth < born_after:
             continue
-        yield {"group": group_of(cls), "cls": cls, "days": (death - birth) / DAY, "event": 1, "path": path, "commit": birth,
+        yield {"group": group_of(cls), "cls": cls, "days": (death - birth) / DAY, "event": 1, "path": path, "commit": cid,
                "exposed": killer != identity(cls, author) or exposed(fkey, birth, death, author, cls)}
     for path, lines in state.files.items():
-        for birth, cls, author, fkey, _ in lines:
+        for birth, cls, author, fkey, _, cid in lines:
             if born_after is not None and birth < born_after:
                 continue
-            yield {"group": group_of(cls), "cls": cls, "days": (end - birth) / DAY, "event": 0, "path": path, "commit": birth,
+            yield {"group": group_of(cls), "cls": cls, "days": (end - birth) / DAY, "event": 0, "path": path, "commit": cid,
                    "exposed": exposed(fkey, birth, end, author, cls)}
 
 

@@ -219,6 +219,55 @@ class TestGenerated(unittest.TestCase):
         self.assertEqual(sorted(st.files), ["src/a.py"])
 
 
+class TestReviewFindings(unittest.TestCase):
+    """Bugs an independent reviewer found by reading the code."""
+
+    def test_file_renamed_out_of_an_excluded_dir_is_skipped_not_misplaced(self):
+        r = Repo()
+        r.commit({"vendor/lib.py": "".join("v%d = %d\n" % (i, i) for i in range(10))}, day=0)   # excluded (vendor/)
+        r.git("mv", "vendor/lib.py", "src_lib.py")
+        r.git("commit", "-q", "-m", "un-vendor", day=1)
+        r.commit({"src_lib.py": "".join("v%d = %d\n" % (i, i) for i in range(5)) + "CHANGED = 1\n"
+                  + "".join("v%d = %d\n" % (i, i) for i in range(6, 10))}, day=2)
+        st = r.state()
+        self.assertNotIn("src_lib.py", st.files)                         # never guessed at
+        self.assertEqual(st.dead, [])                                    # and no phantom deaths/births
+        self.assertTrue(st.unknown)
+
+    def test_modifying_an_untracked_file_mid_history_is_skipped(self):
+        r = Repo()
+        r.commit({"a.py": "x = 1\ny = 2\n"}, day=0)
+        st0 = r.state()
+        # simulate "file we never saw": forget it, then modify it
+        st0.files.pop("a.py")
+        r.commit({"a.py": "x = 1\ny = 3\n"}, day=1)
+        record = hl.git_log(r.root, since_commit=st0.last_commit)
+        for rec in record:
+            hl.apply_commit(st0, rec, hl.AGENTS)
+        self.assertNotIn("a.py", st0.files)
+        self.assertEqual(st0.skipped["files that entered tracking mid-history"], 1)
+
+    def test_two_commits_in_the_same_second_are_two_clusters(self):
+        r = Repo()
+        r.commit({"a.py": "a = 1\n"}, day=0)
+        r.commit({"b.py": "b = 1\n"}, day=0)          # same second as the first commit
+        r.commit({"a.py": "a = 2\n", "b.py": "b = 2\n"}, day=5)
+        res = hl.analyze(r.state(), all_history=True, bootstrap=20)
+        self.assertEqual(res["groups"]["human"]["commits"], 3)          # 2 same-second commits + the day-5 rewrite
+
+    def test_old_cache_versions_are_discarded(self):
+        r = Repo()
+        r.commit({"a.py": "a = 1\n"}, day=0)
+        hl.replay(r.root)                                               # writes a v2 cache
+        path = [os.path.join(r.root, ".git", "shelf-life", f) for f in os.listdir(os.path.join(r.root, ".git", "shelf-life"))][0]
+        with open(path) as f:
+            data = json.load(f)
+        data["v"] = 1
+        with open(path, "w") as f:
+            json.dump(data, f)
+        self.assertEqual(hl.replay(r.root).commit_no, 1)                # rebuilt from scratch, no crash
+
+
 class TestCostJoin(unittest.TestCase):
     def test_e9_sessions_match_agent_commits(self):
         r = Repo()
