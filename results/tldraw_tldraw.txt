@@ -1,0 +1,23 @@
+Comparing lines written since the first agent commit (2025-06-05). Use --all-history for everything.
+Commits: human 5883, bot 204, claude 201, cursor 26, copilot 12
+
+Agent lines: 227390 written, 58732 later modified or deleted, median life 426 days
+  still alive after  7 days:  96%  (95% CI 96–96%)
+  still alive after 30 days:  95%  (95% CI 95–95%)
+  still alive after 90 days:  79%  (95% CI 79–79%)
+
+Human lines: 557360 written, 193452 later modified or deleted, median life 460 days
+  still alive after  7 days:  93%  (95% CI 93–93%)
+  still alive after 30 days:  88%  (95% CI 88–88%)
+  still alive after 90 days:  75%  (95% CI 75–75%)
+
+Log-rank test, agent vs human: chi2=5190.9, p<1e-16 → different
+Touched by someone else while alive: agent 77%, human 75%
+
+By author:
+  claude   202577 lines   alive after 30 days:  95%  (95% CI 95–95%)
+  copilot   18127 lines   alive after 30 days:  95%  (95% CI 94–95%)
+  cursor     6686 lines   alive after 30 days:  92%  (95% CI 92–93%)
+  human    557360 lines   alive after 30 days:  88%  (95% CI 88–88%)
+
+Skipped: binary file changes 3684, generated/excluded file changes 18508

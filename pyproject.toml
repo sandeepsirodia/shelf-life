@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "half-life"
+version = "0.1.0"
+description = "How long does your agent code actually survive? Survival analysis on your git history."
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Sandeep Sirodia" }]
+requires-python = ">=3.9"
+keywords = ["survival-analysis", "git", "ai-agents", "claude-code", "code-quality", "statistics"]
+classifiers = ["Programming Language :: Python :: 3", "Topic :: Software Development :: Testing", "Environment :: Console"]
+
+[project.urls]
+Homepage = "https://github.com/sandeepsirodia/half-life"
+
+[project.scripts]
+half-life = "half_life:main"
+
+[tool.setuptools]
+py-modules = ["half_life"]
