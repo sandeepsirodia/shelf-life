@@ -360,8 +360,12 @@ def replay(repo, agents=AGENTS, count_whitespace=False, cache=True, exclude=_DEF
                 state = State.from_json(f.read())
             if state.last_commit == head:
                 return state
-            if subprocess.run(["git", "merge-base", "--is-ancestor", state.last_commit, head], cwd=repo).returncode != 0:
-                state = None  # history was rewritten: start over
+            # Resume only from a commit on HEAD's *first-parent* line (what we replay). Merely being an ancestor
+            # isn't enough: a side-branch commit would splice a different path of history into the state.
+            first_parent = subprocess.run(["git", "rev-list", "--first-parent", head], cwd=repo,
+                                          capture_output=True, text=True).stdout.split()
+            if state.last_commit not in set(first_parent):
+                state = None  # checked out elsewhere, or history rewritten: start over
         except (ValueError, KeyError, OSError):
             state = None
     since = state.last_commit if state else None

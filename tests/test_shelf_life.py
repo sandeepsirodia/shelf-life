@@ -255,6 +255,23 @@ class TestReviewFindings(unittest.TestCase):
         res = hl.analyze(r.state(), all_history=True, bootstrap=20)
         self.assertEqual(res["groups"]["human"]["commits"], 3)          # 2 same-second commits + the day-5 rewrite
 
+    def test_cache_from_a_side_branch_is_not_resumed(self):
+        # Regression: a cache built while a side-branch commit was checked out was resumed after
+        # returning to main, splicing a different history in and inflating the totals.
+        r = Repo()
+        r.commit({"a.py": "a = 1\n"}, day=0)
+        r.git("checkout", "-q", "-b", "side")
+        r.commit({"b.py": "".join("b%d = 1\n" % i for i in range(50))}, day=1, trailer=CLAUDE)
+        hl.replay(r.root)                                  # cache written at the side-branch commit
+        r.git("checkout", "-q", "main")
+        r.commit({"c.py": "c = 1\n"}, day=2)
+        r.git("merge", "-q", "--no-ff", "side", "-m", "merge side", day=3)
+        cached = hl.replay(r.root)
+        fresh = hl.replay(r.root, cache=False)
+        self.assertEqual(dict(cached.commits), dict(fresh.commits))
+        self.assertEqual(len(cached.dead), len(fresh.dead))
+        self.assertEqual({p: len(v) for p, v in cached.files.items()}, {p: len(v) for p, v in fresh.files.items()})
+
     def test_old_cache_versions_are_discarded(self):
         r = Repo()
         r.commit({"a.py": "a = 1\n"}, day=0)

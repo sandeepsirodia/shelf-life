@@ -1,23 +1,23 @@
 Comparing lines written since the first agent commit (2025-10-08). Use --all-history for everything.
 Commits: human 2940, bot 81, claude 59, copilot 1
 
-Agent lines: 10051 written in 27 commits, 3531 later modified or deleted, median life not reached
-  still alive after  7 days:  89%  (95% CI 82–98%)
-  still alive after 30 days:  75%  (95% CI 68–96%)
-  still alive after 90 days:  73%  (95% CI 66–93%)
+Agent lines: 10051 written in 60 commits, 3531 later modified or deleted, median life not reached
+  still alive after  7 days:  89%  (95% CI 79–96%)
+  still alive after 30 days:  75%  (95% CI 67–93%)
+  still alive after 90 days:  73%  (95% CI 65–89%)
 
-Human lines: 75239 written in 297 commits, 8382 later modified or deleted, median life not reached
-  still alive after  7 days:  96%  (95% CI 94–98%)
-  still alive after 30 days:  94%  (95% CI 90–96%)
-  still alive after 90 days:  91%  (95% CI 88–93%)
+Human lines: 75137 written in 384 commits, 8374 later modified or deleted, median life not reached
+  still alive after  7 days:  96%  (95% CI 94–97%)
+  still alive after 30 days:  93%  (95% CI 91–96%)
+  still alive after 90 days:  91%  (95% CI 89–93%)
 
-Agent − human, alive after 30 days: -19 pts (95% CI -27…+1) → no detectable difference
-Agent − human, alive after 90 days: -18 pts (95% CI -26…+1) → no detectable difference
+Agent − human, alive after 30 days: -19 pts (95% CI -26…-0) → agent lines die sooner
+Agent − human, alive after 90 days: -18 pts (95% CI -26…-2) → agent lines die sooner
 (Intervals resample whole commits: lines written together aren't independent.)
 Touched by someone else while alive: agent 96%, human 30%
 
 By author:
-  claude    10049 lines in   26 commits   alive after 30 days:  75%  (95% CI 67–93%)
-  human     75239 lines in  297 commits   alive after 30 days:  94%  (95% CI 91–96%)
+  claude    10049 lines in   59 commits   alive after 30 days:  75%  (95% CI 67–91%)
+  human     75137 lines in  384 commits   alive after 30 days:  93%  (95% CI 91–96%)
 
-Skipped: generated/excluded file changes 318, binary file changes 20
+Skipped: generated/excluded file changes 318, binary file changes 20, files that entered tracking mid-history 1
