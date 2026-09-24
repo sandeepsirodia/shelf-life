@@ -11,8 +11,8 @@ Human lines: 26881 written in 142 commits, 1457 later modified or deleted, media
   still alive after 30 days:  98%  (95% CI 96–99%)
   still alive after 90 days:  94%  (95% CI 91–95%)
 
-Agent − human, alive after 30 days: +1 pts (95% CI +0…+4) → agent lines last longer
-Agent − human, alive after 90 days: +2 pts (95% CI -1…+5) → no detectable difference
+Agent − human, alive after 30 days: +1 pts → too few commits (< 10) to tell
+Agent − human, alive after 90 days: +2 pts → too few commits (< 10) to tell
 (Intervals resample whole commits: lines written together aren't independent.)
 Touched by someone else while alive: agent 72%, human 67%
 

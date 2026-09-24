@@ -564,9 +564,14 @@ def report(res, out):
             out.write("  still alive after %2d days: %s\n" % (h, fmt_surv(v, s.get("commits"))))
         out.write("\n")
     if res.get("diff_clustered"):
+        few = min(res["groups"]["agent"].get("commits", 0), res["groups"]["human"].get("commits", 0)) < MIN_COMMITS
         for h in (30, 90):
             a_ = res["groups"]["agent"]["survival"][h][0] - res["groups"]["human"]["survival"][h][0]
             lo, hi = res["diff_clustered"][h]
+            if few:
+                out.write("Agent − human, alive after %d days: %+.0f pts → too few commits (< %d) to tell\n" % (
+                    h, 100 * a_, MIN_COMMITS))
+                continue
             verdict = "no detectable difference" if lo <= 0 <= hi else ("agent lines last longer" if lo > 0 else
                                                                          "agent lines die sooner")
             out.write("Agent − human, alive after %d days: %+.0f pts (95%% CI %+.0f…%+.0f) → %s\n" % (

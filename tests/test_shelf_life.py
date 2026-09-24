@@ -272,6 +272,17 @@ class TestReviewFindings(unittest.TestCase):
         self.assertEqual(len(cached.dead), len(fresh.dead))
         self.assertEqual({p: len(v) for p, v in cached.files.items()}, {p: len(v) for p, v in fresh.files.items()})
 
+    def test_no_verdict_below_min_commits(self):
+        r = Repo()
+        r.commit({"a.py": "".join("a%d = 1\n" % i for i in range(30))}, day=0, trailer=CLAUDE)
+        for d in range(1, 13):
+            r.commit({"h%d.py" % d: "h = %d\n" % d}, day=d)
+        out = io.StringIO()
+        hl.report(hl.analyze(r.state(), bootstrap=20), out)
+        self.assertIn("too few commits", out.getvalue())
+        self.assertNotIn("last longer", out.getvalue())
+        self.assertNotIn("die sooner", out.getvalue())
+
     def test_old_cache_versions_are_discarded(self):
         r = Repo()
         r.commit({"a.py": "a = 1\n"}, day=0)
