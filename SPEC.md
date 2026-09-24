@@ -1,10 +1,10 @@
-# half-life — SPEC
+# shelf-life — SPEC
 
 > How long does your agent's code actually survive?
 
-Survival analysis on your own git history. For every line added, half-life finds who wrote it (agent or human, and which agent), when it was added, and when, if ever, it was modified or deleted. It then shows survival curves: what fraction of agent-written versus human-written lines is still alive after 7, 30 and 90 days.
+Survival analysis on your own git history. For every line added, shelf-life finds who wrote it (agent or human, and which agent), when it was added, and when, if ever, it was modified or deleted. It then shows survival curves: what fraction of agent-written versus human-written lines is still alive after 7, 30 and 90 days.
 
-A [2026 study](https://arxiv.org/abs/2601.16809) found agent code survives *longer* across 201 projects, and nobody knows whether that's because it's good or because nobody dares touch it. half-life answers that for **your** repo.
+A [2026 study](https://arxiv.org/abs/2601.16809) found agent code survives *longer* across 201 projects, and nobody knows whether that's because it's good or because nobody dares touch it. shelf-life answers that for **your** repo.
 
 ## Who it's for
 - Engineers and leads who want data, not vibes, on what agent code costs them over time.
@@ -22,7 +22,7 @@ A [2026 study](https://arxiv.org/abs/2601.16809) found agent code survives *long
 5. **Confound check (the honest part):** also report the hazard of lines that were *modified by the same author* versus *by others*. Agent code surviving longer only because nobody touches it shows up as "never touched by anyone else".
 6. **Cost join (optional):** `--transcripts ~/.claude/projects` matches sessions to commits (timestamp plus branch plus files touched) and reports **cost per surviving line** at 90 days. Matching is conservative, and unmatched commits are reported.
 7. **Output:** a terminal summary, `--json`, and `--html` (a single file with SVG survival curves drawn by hand, no JS libraries).
-8. **Fast enough:** 10k commits in under 60 s, with an incremental cache in `.git/half-life/`.
+8. **Fast enough:** 10k commits in under 60 s, with an incremental cache in `.git/shelf-life/`.
 9. **Stdlib only.**
 
 ## Won't do (v1)

@@ -1,4 +1,4 @@
-"""half-life: how long does your agent's code actually survive?
+"""shelf-life: how long does your agent's code actually survive?
 
 Survival analysis on your own git history. Every added line is tracked from birth until it is
 modified or deleted; lines still alive at HEAD are censored. Kaplan-Meier curves, Greenwood
@@ -331,7 +331,7 @@ def replay(repo, agents=AGENTS, count_whitespace=False, cache=True, exclude=_DEF
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
     tag = "%s-%08x" % ("ws" if count_whitespace else "nows", zlib.crc32(((exclude.pattern if exclude else "") +
                                                                         repr(agents)).encode()))
-    cache_path = os.path.join(repo, ".git", "half-life", "state-%s.json" % tag)
+    cache_path = os.path.join(repo, ".git", "shelf-life", "state-%s.json" % tag)
     state = None
     if cache and os.path.exists(cache_path):
         try:
@@ -604,10 +604,10 @@ def svg_curves(res, width=640, height=320):
 def html_report(res, name):
     body = []
     report(res, type("W", (), {"write": lambda self, s: body.append(s)})())
-    return ("<!doctype html><meta charset=utf-8><title>half-life: %s</title>"
+    return ("<!doctype html><meta charset=utf-8><title>shelf-life: %s</title>"
             "<style>body{font:15px system-ui;max-width:760px;margin:40px auto;padding:0 16px;color:#1a1a1a;background:#fff}"
             "pre{white-space:pre-wrap}@media(prefers-color-scheme:dark){body{background:#111;color:#eee}}</style>"
-            "<h1>half-life: %s</h1><p>Share of lines still alive, by age (Kaplan–Meier).</p>%s<pre>%s</pre>") % (
+            "<h1>shelf-life: %s</h1><p>Share of lines still alive, by age (Kaplan–Meier).</p>%s<pre>%s</pre>") % (
         html.escape(name), html.escape(name), svg_curves(res), html.escape("".join(body)))
 
 
@@ -615,7 +615,7 @@ def html_report(res, name):
 
 def main(argv=None, out=None):
     out = out or sys.stdout
-    ap = argparse.ArgumentParser(prog="half-life", description="How long does your agent's code actually survive?")
+    ap = argparse.ArgumentParser(prog="shelf-life", description="How long does your agent's code actually survive?")
     ap.add_argument("repo", nargs="?", default=".")
     ap.add_argument("--by", action="append", choices=["cls", "dir", "ext", "kind"], help="breakdowns (default: cls)")
     ap.add_argument("--count-whitespace", action="store_true", help="count whitespace-only edits as deaths")

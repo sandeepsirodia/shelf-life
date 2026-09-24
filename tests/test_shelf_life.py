@@ -11,7 +11,7 @@ import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import half_life as hl  # noqa: E402
+import shelf_life as hl  # noqa: E402
 
 DAY = 86400
 T0 = 1_700_000_000  # fixed epoch for fixtures
