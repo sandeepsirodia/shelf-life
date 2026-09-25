@@ -22,7 +22,7 @@ shelf-life runs **survival analysis** on your own git history, the same statisti
 <p align="center"><img src="https://raw.githubusercontent.com/sandeepsirodia/shelf-life/main/assets/agent-vs-human.svg" alt="Agent vs human code, still alive after 30 days: llm too few commits to tell; datasette −19 points (−26…−0); uv +5 (−6…+12); tldraw +7 (+1…+13)" width="760"></p>
 
 ```console
-$ uvx --from git+https://github.com/sandeepsirodia/shelf-life shelf-life
+$ uvx shelf-life
 
 Comparing lines written since the first agent commit (2025-10-08).
 Agent lines: 10051 written in 60 commits, …
