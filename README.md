@@ -19,7 +19,7 @@ Maybe. Or maybe nobody dares touch it. Or maybe it's being compared against lock
 
 shelf-life runs **survival analysis** on your own git history, the same statistics medicine uses to ask "how long do patients survive on this drug?". Every line is tracked from the commit that wrote it until the commit that changed or deleted it. Agent-written lines (from `Co-Authored-By: Claude / Codex / Copilot / Cursor…` trailers) are compared with human-written ones.
 
-<p align="center"><img src="assets/agent-vs-human.svg" alt="Agent vs human code, still alive after 30 days: llm too few commits to tell; datasette −19 points (−26…−0); uv +5 (−6…+12); tldraw +7 (+1…+13)" width="760"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/sandeepsirodia/shelf-life/main/assets/agent-vs-human.svg" alt="Agent vs human code, still alive after 30 days: llm too few commits to tell; datasette −19 points (−26…−0); uv +5 (−6…+12); tldraw +7 (+1…+13)" width="760"></p>
 
 ```console
 $ uvx --from git+https://github.com/sandeepsirodia/shelf-life shelf-life
